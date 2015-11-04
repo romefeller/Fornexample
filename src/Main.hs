@@ -40,6 +40,8 @@ mkYesod "Pagina" [parseRoutes|
   /forncedor FornR GET POST
   /listpeca ListarPecaR GET
   /listforn ListarFornR GET
+  /ordem OrdemR GET POST
+  /listordem ListarOrdemR GET
 |]
 
 instance YesodPersist Pagina where
@@ -53,6 +55,22 @@ type Form a = Html -> MForm Handler (FormResult a, Widget)
 
 instance RenderMessage Pagina FormMessage where
     renderMessage _ _ = defaultFormMessage
+
+formOrdem :: Form Ordem
+formOrdem = renderDivs $ Ordem <$>
+             areq (selectField forns) "Peca" Nothing <*>
+             areq (selectField pecas) "Forn" Nothing <*>
+             areq intField "Qtde" Nothing <*>
+             lift (liftIO getCurrentTime) <*>
+             lift (liftIO $ return False)
+
+pecas = do
+       entidades <- runDB $ selectList [] [Asc PecaNome] 
+       optionsPairs $ fmap (\ent -> (pecaNome $ entityVal ent, entityKey ent)) entidades
+
+forns = do
+       entidades <- runDB $ selectList [] [Asc FornecedorNome] 
+       optionsPairs $ fmap (\ent -> (fornecedorNome $ entityVal ent, entityKey ent)) entidades
 
 formPeca :: Form Peca
 formPeca = renderDivs $ Peca <$>
@@ -115,6 +133,29 @@ getListarFornR = do
                       $forall Entity fid fent <- forns
                           <h2> #{fornecedorNome fent}
                  |]
+
+getOrdemR :: Handler Html
+getOrdemR = do
+           (widget, enctype) <- generateFormPost formOrdem
+           defaultLayout $ widgetForm OrdemR enctype widget "Ordens"
+
+postOrdemR :: Handler Html
+postOrdemR = do
+            ((result,_),_) <- runFormPost formOrdem
+            case result of
+                FormSuccess x -> (runDB $ insert x) >> defaultLayout [whamlet|<h1> Ordem inserida|]
+                _ -> redirect OrdemR
+
+getListarOrdemR :: Handler Html
+getListarOrdemR = do
+                 ordens <- runDB $ selectList [] [Asc OrdemData]
+                 defaultLayout [whamlet|
+                      <h1> Lista de Ordens
+                      $forall Entity oid oent <- ordens
+                          <h2> Ordem #{fromSqlKey oid}  
+
+                 |]
+
 
 connStr = "dbname=dd9en8l5q4hh2a host=ec2-107-21-219-201.compute-1.amazonaws.com user=kpuwtbqndoeyqb password=aCROh525uugAWF1l7kahlNN3E0 port=5432"
 
