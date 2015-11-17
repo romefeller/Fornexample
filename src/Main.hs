@@ -10,7 +10,8 @@ import Data.Time
 import qualified Data.Text as T
 import Control.Applicative
 import Yesod
-
+import qualified Database.Esqueleto as E
+import Database.Esqueleto
 
 data Pagina = Pagina{connPool :: ConnectionPool}
 
@@ -148,14 +149,15 @@ postOrdemR = do
 
 getListarOrdemR :: Handler Html
 getListarOrdemR = do
-                 ordens <- runDB $ selectList [] [Asc OrdemData]
+                 ordens <- runDB $ E.select $ E.from $ \(ordem `E.InnerJoin` peca) -> do
+                               E.on $ ordem ^. OrdemPecaId E.==. peca ^. PecaId
+                               return (peca ^. PecaNome,
+                                       ordem ^. OrdemId)
                  defaultLayout [whamlet|
                       <h1> Lista de Ordens
-                      $forall Entity oid oent <- ordens
-                          <h2> Ordem #{fromSqlKey oid}  
-
+                      $forall (E.Value np, E.Value oq) <- ordens
+                          <p> Ordem #{fromSqlKey oq}: #{np}
                  |]
-
 
 connStr = "dbname=dd9en8l5q4hh2a host=ec2-107-21-219-201.compute-1.amazonaws.com user=kpuwtbqndoeyqb password=aCROh525uugAWF1l7kahlNN3E0 port=5432"
 
