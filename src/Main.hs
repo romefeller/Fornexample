@@ -10,9 +10,8 @@ import Data.Time
 import qualified Data.Text as T
 import Control.Applicative
 import Yesod
-import qualified Database.Esqueleto as E
-import Database.Esqueleto
-
+--import qualified Database.Esqueleto as E
+--import Database.Esqueleto ((^.))
 data Pagina = Pagina{connPool :: ConnectionPool}
 
 instance Yesod Pagina
@@ -33,7 +32,7 @@ Ordem
    qtde Int
    data UTCTime default=now()
    processado Bool
-   UniquePersonStore fornId pecaId
+   UniqueFornPeca fornId pecaId
 |]
 
 mkYesod "Pagina" [parseRoutes|
@@ -42,7 +41,7 @@ mkYesod "Pagina" [parseRoutes|
   /listpeca ListarPecaR GET
   /listforn ListarFornR GET
   /ordem OrdemR GET POST
-  /listordem ListarOrdemR GET
+  / ListarOrdemR GET
 |]
 
 instance YesodPersist Pagina where
@@ -149,14 +148,13 @@ postOrdemR = do
 
 getListarOrdemR :: Handler Html
 getListarOrdemR = do
-                 ordens <- runDB $ E.select $ E.from $ \(ordem `E.InnerJoin` peca) -> do
-                               E.on $ ordem ^. OrdemPecaId E.==. peca ^. PecaId
-                               return (peca ^. PecaNome,
-                                       ordem ^. OrdemId)
+                 ordens <- runDB $ (rawSql "SELECT ??, ?? \
+                                   \FROM ordem INNER JOIN peca \
+                                   \ON ordem.peca_id=peca.id" [])::Handler [(Entity Ordem, Entity Peca)]
                  defaultLayout [whamlet|
                       <h1> Lista de Ordens
-                      $forall (E.Value np, E.Value oq) <- ordens
-                          <p> Ordem #{fromSqlKey oq}: #{np}
+                      $forall (Entity oq _, Entity _ np) <- ordens
+                          <p> Ordem #{fromSqlKey oq}: #{pecaNome np}
                  |]
 
 connStr = "dbname=dd9en8l5q4hh2a host=ec2-107-21-219-201.compute-1.amazonaws.com user=kpuwtbqndoeyqb password=aCROh525uugAWF1l7kahlNN3E0 port=5432"
