@@ -10,8 +10,8 @@ import Data.Time
 import qualified Data.Text as T
 import Control.Applicative
 import Yesod
---import qualified Database.Esqueleto as E
---import Database.Esqueleto ((^.))
+import Yesod.Form.Jquery
+
 data Pagina = Pagina{connPool :: ConnectionPool}
 
 instance Yesod Pagina
@@ -24,6 +24,7 @@ Fornecedor
 Peca
    nome Text sqltype=varchar(20)
    descricao Text
+   dia Day Maybe
    estoque Int
 
 Ordem
@@ -53,6 +54,8 @@ instance YesodPersist Pagina where
 
 type Form a = Html -> MForm Handler (FormResult a, Widget)
 
+instance YesodJquery Pagina where
+
 instance RenderMessage Pagina FormMessage where
     renderMessage _ _ = defaultFormMessage
 
@@ -76,6 +79,9 @@ formPeca :: Form Peca
 formPeca = renderDivs $ Peca <$>
              areq textField "Nome" Nothing <*>
              areq textField "Desc" Nothing <*>
+             aopt (jqueryDayField def { jdsChangeYear = True -- give a year dropdown
+                 , jdsYearRange = "1900:-5" -- 1900 till five years ago
+                  }) "Chegada" Nothing <*>
              areq intField "Qtde Estoque" Nothing
 
 formForn :: Form Fornecedor
@@ -122,7 +128,10 @@ getListarPecaR = do
                  defaultLayout [whamlet|
                       <h1> Lista de Pecas
                       $forall Entity pid pent <- pecas
-                          <h2> #{pecaNome pent}
+                          <h2> 
+                              #{pecaNome pent}
+                              $maybe mdia <- pecaDia pent
+                                  #{show mdia}
                  |]
 
 getListarFornR :: Handler Html
