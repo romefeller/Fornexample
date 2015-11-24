@@ -42,6 +42,7 @@ mkYesod "Pagina" [parseRoutes|
   /listpeca ListarPecaR GET
   /listforn ListarFornR GET
   /ordem OrdemR GET POST
+  /teste TesteR GET POST
   / ListarOrdemR GET
 |]
 
@@ -80,7 +81,7 @@ formPeca = renderDivs $ Peca <$>
              areq textField "Nome" Nothing <*>
              areq textField "Desc" Nothing <*>
              aopt (jqueryDayField def { jdsChangeYear = True -- give a year dropdown
-                 , jdsYearRange = "1900:-5" -- 1900 till five years ago
+                 , jdsYearRange = "1980:2015" -- 1900 till five years ago
                   }) "Chegada" Nothing <*>
              areq intField "Qtde Estoque" Nothing
 
@@ -166,6 +167,25 @@ getListarOrdemR = do
                           <p> Ordem do dia #{show $ utctDay $ ordemData ordem} #{fromSqlKey oq}: #{pecaNome np}
                  |]
 
+getTesteR :: Handler Html
+getTesteR = defaultLayout [whamlet|
+<form action=@{TesteR} method=post>
+    <select name="cars" multiple>
+       <option value="volvo">Volvo</option>
+       <option value="saab">Saab</option>
+       <option value="opel">Opel</option>
+       <option value="audi">Audi</option>
+
+    <input type="submit">
+|]
+
+
+postTesteR :: Handler Html
+postTesteR = do
+    var <- lookupPostParams "cars"
+    defaultLayout [whamlet| 
+        #{show var}
+    |]
 connStr = "dbname=dd9en8l5q4hh2a host=ec2-107-21-219-201.compute-1.amazonaws.com user=kpuwtbqndoeyqb password=aCROh525uugAWF1l7kahlNN3E0 port=5432"
 
 main::IO()
